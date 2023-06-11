@@ -154,12 +154,6 @@ public actor NetworkingAPI {
         
         switch httpURLResponse.statusCode {
         case 200...299:
-            #if DEBUG
-            //if let rawJson = try? JSONSerialization.jsonObject(with: data) {
-            //    debugPrint(rawJson)
-            //}
-            #endif
-            
             return try decoder.decode(Response.self, from: data)
         case 400:
             throw BadRequestError(data: data)

@@ -46,6 +46,14 @@ public extension FormCondition {
         return .init(value: string, matchingRegexPattern: emailPattern)
     }
     
+    static func simplePassword(_ string: String) -> FormCondition {
+        let passwordPattern =
+            // At least 8 characters
+            #"(?=.{8,})"#
+        
+        return .init(value: string, matchingRegexPattern: passwordPattern)
+    }
+    
     static func complexPassword(_ string: String) -> FormCondition {
         let passwordPattern =
             // At least 8 characters
