@@ -17,6 +17,15 @@ public struct MultipartDataItem {
         self.value = value
     }
     
+    public init?(name: String, value: Value?) {
+        guard let value else {
+            return nil
+        }
+        
+        self.name = name
+        self.value = value
+    }
+    
     public enum Value {
         case string(String)
         case file(data: Data, fileName: String, mimeType: String)
@@ -31,6 +40,14 @@ public struct MultipartDataItem {
         
         public static func number(_ value: Double) -> Value {
             .string("\(value)")
+        }
+        
+        public static func optional(_ value: String?) -> Value? {
+            guard let value else {
+                return nil
+            }
+            
+            return .string(value)
         }
     }
     
