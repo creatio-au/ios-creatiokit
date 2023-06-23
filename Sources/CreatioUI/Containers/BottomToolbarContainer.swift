@@ -42,7 +42,7 @@ fileprivate let globalKeyboardPublisher: AnyPublisher<(Bool, Animation), Never> 
                 if let info = notification.userInfo,
                    let duration = info[UIResponder.keyboardAnimationDurationUserInfoKey] as? Double,
                    let curveValue = info[UIResponder.keyboardAnimationCurveUserInfoKey] as? Int,
-                   let curve = UIView.AnimationCurve(rawValue: curveValue) {                    
+                   let curve = UIView.AnimationCurve(rawValue: curveValue) {
                     switch curve {
                     case .linear:
                         animation = .linear(duration: duration)
