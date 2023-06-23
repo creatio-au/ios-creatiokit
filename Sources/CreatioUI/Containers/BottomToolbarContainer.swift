@@ -1,6 +1,6 @@
 //
 //  BottomToolbarContainer.swift
-//  
+//
 //
 //  Created by Davis Allie on 22/7/2022.
 //
@@ -8,54 +8,90 @@
 import Combine
 import SwiftUI
 
-public struct BottomToolbarContainer<Content: View, Toolbar: View>: View, KeyboardReadable {
+fileprivate let globalKeyboardPublisher: AnyPublisher<(Bool, Animation), Never> =
+    Publishers.Merge(
+        NotificationCenter.default
+            .publisher(for: UIResponder.keyboardWillShowNotification)
+            .map { notification in
+                var animation: Animation = .default
+                if let info = notification.userInfo,
+                   let duration = info[UIResponder.keyboardAnimationDurationUserInfoKey] as? Double,
+                   let curveValue = info[UIResponder.keyboardAnimationCurveUserInfoKey] as? Int,
+                   let curve = UIView.AnimationCurve(rawValue: curveValue) {
+                    switch curve {
+                    case .linear:
+                        animation = .linear(duration: duration)
+                    case .easeIn:
+                        animation = .easeIn(duration: duration)
+                    case .easeOut:
+                        animation = .easeOut(duration: duration)
+                    case .easeInOut:
+                        animation = .easeInOut(duration: duration)
+                    @unknown default:
+                        break
+                    }
+                }
+                
+                return (true, animation)
+            },
+        
+        NotificationCenter.default
+            .publisher(for: UIResponder.keyboardWillHideNotification)
+            .map { notification in
+                var animation: Animation = .default
+                if let info = notification.userInfo,
+                   let duration = info[UIResponder.keyboardAnimationDurationUserInfoKey] as? Double,
+                   let curveValue = info[UIResponder.keyboardAnimationCurveUserInfoKey] as? Int,
+                   let curve = UIView.AnimationCurve(rawValue: curveValue) {                    
+                    switch curve {
+                    case .linear:
+                        animation = .linear(duration: duration)
+                    case .easeIn:
+                        animation = .easeIn(duration: duration)
+                    case .easeOut:
+                        animation = .easeOut(duration: duration)
+                    case .easeInOut:
+                        animation = .easeInOut(duration: duration)
+                    @unknown default:
+                        break
+                    }
+                }
+                
+                return (false, animation)
+            }
+    )
+    .eraseToAnyPublisher()
+
+public struct BottomToolbarContainer<Content: View, Toolbar: View>: View {
     
-    // For some reason the geometry size is correct but
-    // the scrollview inset needs additional points
-    // to line up correctly in some layouts
-    let extraPadding: CGFloat
     let content: Content
     let toolbar: Toolbar
     
-    public init(extraPadding: CGFloat = 0.0, @ViewBuilder content: () -> Content, @ViewBuilder toolbar: () -> Toolbar) {
-        self.extraPadding = extraPadding
+    public init(@ViewBuilder content: () -> Content, @ViewBuilder toolbar: () -> Toolbar) {
         self.content = content()
         self.toolbar = toolbar()
     }
     
-    @State private var isInNavigationView = false
     @State private var keyboardVisible = false
     
-    // For some reason the geometry size is correct but
-    // the scrollview inset needs an additional 20 points
-    // to line up correctly when in a navigation view
-    @State private var toolbarHeight: CGFloat = 0.0
-    
     public var body: some View {
-        ZStack {
-            ScrollView {
-                content
+        ScrollView {
+            content
+        }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            if !keyboardVisible {
+                VStack(spacing: 0) {
+                    Divider()
+                    
+                    toolbar
+                }
+                .transition(.move(edge: .bottom).combined(with: .opacity))
             }
-            .padding(.bottom, keyboardVisible ? 0 : toolbarHeight + extraPadding)
-            .onReceive(keyboardPublisher) { isVisible in
-                keyboardVisible = isVisible
+        }
+        .onReceive(globalKeyboardPublisher) { visible, animation in
+            withAnimation(animation) {
+                keyboardVisible = visible
             }
-            
-            VStack(spacing: 0) {
-                Divider()
-                
-                toolbar
-                    .background {
-                        GeometryReader { geometry in
-                            Color.clear
-                                .onAppear {
-                                    toolbarHeight = geometry.size.height
-                                }
-                        }
-                    }
-            }
-            .frame(maxHeight: .infinity, alignment: .bottom)
-            .ignoresSafeArea(.keyboard)
         }
     }
     
@@ -71,6 +107,13 @@ struct BottomToolbarContainer_Previews: PreviewProvider {
                 VStack {
                     ForEach(0..<30) { i in
                         TextField("Field", text: $input)
+                    }
+                }
+                .toolbar {
+                    ToolbarItemGroup(placement: .keyboard) {
+                        Button("Keyboard") {
+                            
+                        }
                     }
                 }
                 .textFieldStyle(.roundedBorder)
@@ -108,25 +151,5 @@ struct BottomToolbarContainer_Previews: PreviewProvider {
         }
         
         Preview()
-    }
-}
-
-/// Publisher to read keyboard changes.
-protocol KeyboardReadable {
-    var keyboardPublisher: AnyPublisher<Bool, Never> { get }
-}
-
-extension KeyboardReadable {
-    var keyboardPublisher: AnyPublisher<Bool, Never> {
-        Publishers.Merge(
-            NotificationCenter.default
-                .publisher(for: UIResponder.keyboardWillShowNotification)
-                .map { _ in true },
-            
-            NotificationCenter.default
-                .publisher(for: UIResponder.keyboardWillHideNotification)
-                .map { _ in false }
-        )
-        .eraseToAnyPublisher()
     }
 }
