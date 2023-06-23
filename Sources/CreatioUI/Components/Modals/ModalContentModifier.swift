@@ -14,8 +14,9 @@ struct ModalContentModifier<ModalContent: View>: ViewModifier {
     var configuration: ModalConfiguration
     var contents: ModalContent
     
-    @State private var viewController: UIViewController?
-    @State private var presentedViewController: UIViewController?
+    @State private var windowScene: UIWindowScene?
+    @State private var previousWindow: UIWindow?
+    @State private var presentedWindow: UIWindow?
     
     init(isPresented: Binding<Bool>, configuration: ModalConfiguration, @ViewBuilder _ contents: () -> ModalContent) {
         self._isPresented = isPresented
@@ -27,24 +28,37 @@ struct ModalContentModifier<ModalContent: View>: ViewModifier {
         content
             .onChange(of: isPresented) { presented in
                 if presented {
+                    guard let windowScene else {
+                        return
+                    }
+                    
                     let wrappedContents = ModalContents(isPresented: $isPresented, configuration: configuration) {
                         contents
                     }
                     
-                    let host = UIHostingController(rootView: wrappedContents)
-                    host.modalPresentationStyle = .overFullScreen
-                    host.view.backgroundColor = .clear
-                    presentedViewController = host
+                    let window = UIWindow(windowScene: windowScene)
+                    window.windowLevel = .alert
+                    window.backgroundColor = .clear
                     
-                    viewController?.present(host, animated: false)
+                    let host = UIHostingController(rootView: wrappedContents)
+                    host.view.backgroundColor = .clear
+                    window.rootViewController = host
+                    
+                    previousWindow = windowScene.keyWindow
+                    window.makeKeyAndVisible()
+                    presentedWindow = window
                 } else {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                        presentedViewController?.dismiss(animated: false)
+                        presentedWindow?.isHidden = true
+                        presentedWindow?.removeFromSuperview()
+                        presentedWindow = nil
+                        
+                        previousWindow?.makeKeyAndVisible()
                     }
                 }
             }
             .introspectViewController { viewController in
-                self.viewController = viewController
+                windowScene = viewController.view?.window?.windowScene
             }
     }
     
